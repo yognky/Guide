@@ -18,36 +18,33 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         source = audioCtx.createMediaStreamSource(stream);
 
-        // bikin processor untuk ubah suara mic
         processor = audioCtx.createScriptProcessor(2048, 1, 1);
 
         processor.onaudioprocess = function(e) {
           const input = e.inputBuffer.getChannelData(0);
           const output = e.outputBuffer.getChannelData(0);
           for (let i = 0; i < input.length; i++) {
-            // ambil suara asli, ubah jadi glitchy
             let val = input[i];
 
-            // bitcrush kasar
-            val = Math.round(val * 6) / 6;
-
-            // kadang-kadang pecah (kayak mic rusak)
+            // efek glitch (bitcrush + pecah random)
+            let glitch = Math.round(val * 6) / 6;
             if (Math.random() > 0.97) {
-              val = (Math.random() * 2 - 1) * 0.7;
+              glitch = (Math.random() * 2 - 1) * 0.7;
             }
+            glitch = Math.tanh(glitch * 3);
 
-            // kasih sedikit distorsi biar kasar
-            output[i] = Math.tanh(val * 3);
+            // campurin: 70% suara asli + 30% glitch
+            output[i] = (val * 0.7) + (glitch * 0.3);
           }
         };
 
-        // routing audio
+        // routing
         dest = audioCtx.createMediaStreamDestination();
         source.connect(processor);
         processor.connect(audioCtx.destination); // realtime
         processor.connect(dest); // untuk rekaman
 
-        // recorder setup
+        // recorder
         mediaRecorder = new MediaRecorder(dest.stream);
         mediaRecorder.ondataavailable = e => chunks.push(e.data);
         mediaRecorder.onstop = () => {
@@ -63,7 +60,7 @@
 
         document.getElementById("start").disabled = true;
         document.getElementById("stop").disabled = false;
-        alert("✅ Voice changer ON! Mic lu sekarang glitchy.");
+        alert("✅ Voice changer ON! Suara asli + glitch aktif.");
       } catch (err) {
         alert("❌ Error: " + err.message);
         console.error(err);
