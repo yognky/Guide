@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice Changer Kresek²</title>
+</head>
+<body>
+  <h2>Voice Changer Suara Kresek² / Glitch</h2>
+  <button id="start">🎤 Start Voice Changer</button>
+
+  <script>
+    document.getElementById("start").onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+
+        const bitCrusher = audioCtx.createScriptProcessor(2048, 1, 1);
+
+        bitCrusher.onaudioprocess = (e) => {
+          const input = e.inputBuffer.getChannelData(0);
+          const output = e.outputBuffer.getChannelData(0);
+          for (let i = 0; i < input.length; i++) {
+            if (Math.random() > 0.85) {
+              // glitch random keras
+              output[i] = (Math.random() * 2 - 1) * 0.8;
+            } else {
+              // bitcrush lebih kasar
+              output[i] = Math.round(input[i] * 4) / 4;
+            }
+          }
+        };
+
+        source.connect(bitCrusher);
+        bitCrusher.connect(audioCtx.destination);
+
+        alert("✅ Voice Changer aktif! Coba ngomong, suara jadi kresek² glitch.");
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+        console.error(err);
+      }
+    };
+  </script>
+</body>
+    </html>
