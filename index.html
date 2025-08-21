@@ -1,44 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Voice Changer Kresek²</title>
+  <title>Voice Changer Glitch Mic</title>
 </head>
 <body>
-  <h2>Voice Changer Suara Kresek² / Glitch</h2>
+  <h2>Voice Changer Suara Mic Rusak / Glitch</h2>
   <button id="start">🎤 Start Voice Changer</button>
+  <button id="stop" disabled>⛔ Stop & Save</button>
+  <a id="download" style="display:none;">⬇️ Download Rekaman</a>
 
   <script>
+    let audioCtx, source, processor, dest, mediaRecorder, chunks = [];
+
     document.getElementById("start").onclick = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioCtx.createMediaStreamSource(stream);
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaStreamSource(stream);
 
-        const bitCrusher = audioCtx.createScriptProcessor(2048, 1, 1);
+        // bikin processor untuk ubah suara mic
+        processor = audioCtx.createScriptProcessor(2048, 1, 1);
 
-        bitCrusher.onaudioprocess = (e) => {
+        processor.onaudioprocess = function(e) {
           const input = e.inputBuffer.getChannelData(0);
           const output = e.outputBuffer.getChannelData(0);
           for (let i = 0; i < input.length; i++) {
-            if (Math.random() > 0.85) {
-              // glitch random keras
-              output[i] = (Math.random() * 2 - 1) * 0.8;
-            } else {
-              // bitcrush lebih kasar
-              output[i] = Math.round(input[i] * 4) / 4;
+            // ambil suara asli, ubah jadi glitchy
+            let val = input[i];
+
+            // bitcrush kasar
+            val = Math.round(val * 6) / 6;
+
+            // kadang-kadang pecah (kayak mic rusak)
+            if (Math.random() > 0.97) {
+              val = (Math.random() * 2 - 1) * 0.7;
             }
+
+            // kasih sedikit distorsi biar kasar
+            output[i] = Math.tanh(val * 3);
           }
         };
 
-        source.connect(bitCrusher);
-        bitCrusher.connect(audioCtx.destination);
+        // routing audio
+        dest = audioCtx.createMediaStreamDestination();
+        source.connect(processor);
+        processor.connect(audioCtx.destination); // realtime
+        processor.connect(dest); // untuk rekaman
 
-        alert("✅ Voice Changer aktif! Coba ngomong, suara jadi kresek² glitch.");
+        // recorder setup
+        mediaRecorder = new MediaRecorder(dest.stream);
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "audio/wav" });
+          chunks = [];
+          const url = URL.createObjectURL(blob);
+          const a = document.getElementById("download");
+          a.href = url;
+          a.download = "voice-glitch.wav";
+          a.style.display = "block";
+        };
+        mediaRecorder.start();
+
+        document.getElementById("start").disabled = true;
+        document.getElementById("stop").disabled = false;
+        alert("✅ Voice changer ON! Mic lu sekarang glitchy.");
       } catch (err) {
         alert("❌ Error: " + err.message);
         console.error(err);
       }
     };
+
+    document.getElementById("stop").onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      if (audioCtx) audioCtx.close();
+      document.getElementById("start").disabled = false;
+      document.getElementById("stop").disabled = true;
+      alert("⛔ Voice changer berhenti. File siap diunduh.");
+    };
   </script>
 </body>
-    </html>
+</html>
